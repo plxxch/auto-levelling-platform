@@ -55,7 +55,7 @@ relay. All relays are initialised to `GPIO.HIGH` (off) at start-up.
 ```
 auto_levelling_platform.py   # controller
 requirements.txt              # RPi.GPIO, pyserial, numpy
-KNOWN_ISSUES.md               # notes on the original prototype
+KNOWN_ISSUES.md               # implementation notes and remaining limitations
 ```
 
 ## Requirements
@@ -91,11 +91,16 @@ Press Enter to continue.
 
 ## Prototype status
 
-This is the original research-prototype code, archived for reference. It is
-**not** a production controller: hardware limit switches, emergency-stop
-handling, watchdog behaviour and electrical safety interlocks are outside this
-script. Review [KNOWN_ISSUES.md](KNOWN_ISSUES.md) before running it on
-hardware.
+This is the original research-prototype controller. The implementation issues
+found in the 2020 snapshot are fixed (relay call, `recordlength()` branches,
+angle-sample toggle, invalid `S1`–`S4` GPIO setup, serial reuse, entry point and
+cleanup); the control logic and pin map are unchanged.
+
+It is still **not** a production controller: hardware limit switches,
+emergency-stop handling, watchdog behaviour and electrical safety interlocks
+are outside this script. See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for the fixed
+items and the remaining limitations (including the whole-degree angle
+resolution).
 
 ## License
 

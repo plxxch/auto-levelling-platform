@@ -1,8 +1,7 @@
-import math
-from time import *
-import RPi.GPIO as GPIO
-import sys
+from time import sleep
+
 import serial
+import RPi.GPIO as GPIO
 import numpy as np
 
 #Signal
@@ -20,8 +19,7 @@ S3G = False
 S4G = False
 #Serial of inclinometer
 
-ser = serial.Serial(port = '/dev/ttyUSB0',baudrate=9600
-,timeout=0.5)
+ser = None
 command_xyz = b'\x77\x04\x00\x04\x08'
 feedback = ""
 pattern_x = ""
@@ -57,7 +55,6 @@ Leg4_ret=0
 
 
 Compare=False
-COmpare_index=0
 Count_Angle=0
 
 RL=[0,0,0,0]
@@ -101,25 +98,6 @@ px2 = 0             #previous_y_1
 py2 = 0
 th_load=0.1
 
-#Initial setup
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-
-#Sensor pin setup
-GPIO.setup(S1,GPIO.OUT)
-GPIO.setup(S2,GPIO.OUT)
-GPIO.setup(S3,GPIO.OUT)
-GPIO.setup(S4,GPIO.OUT)
-
-#Initial pin setup
-GPIO.setup(relay1,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay2,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay3,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay4,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay5,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay6,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay7,GPIO.OUT,initial=GPIO.HIGH)
-GPIO.setup(relay8,GPIO.OUT,initial=GPIO.HIGH)
 
 
 power_mgmt_1 = 0x6b
@@ -133,155 +111,32 @@ change = False
 
 #Jugde load or unload condition
 def recordlength():
-    global L1
-    global L2
-    global L3
-    global L4
-    global Leg1_ext
-    global Leg1_ret
-    global Leg2_ext
-    global Leg2_ret
-    global Leg3_ext
-    global Leg3_ret
-    global Leg4_ext
-    global Leg4_ret
-    global Compare
-    global Compare_index
-    global Count_Angle
-    global px1
-    global px2
-    global py1
-    global py2
-   # try:
-   #     AngleXY(ser)
-   #     if Count_Angle==0:
-   #         px1 = angle_x
-   #         py2 = angle_y
-   #     else:   
-   #         px2 = angle_x
-   #         py2 = angle_y
-   #     Count_Angle = ~ Count_Angle
-   # except:
-   #     if Count_Angle==0:
-   #         px1 = angle_x
-   #         py2 = angle_y
-   #     else :  
-   #         px2 = angle_x
-   #         py2 = angle_y
-   #     Count_Angle = ~ Count_Angle
+    global L1, L2, L3, L4
+    global Leg1_ext, Leg1_ret, Leg2_ext, Leg2_ret
+    global Leg3_ext, Leg3_ret, Leg4_ext, Leg4_ret
+    global px1, px2, py1, py2
 
-    if (abs(px2-px1)!=0) or (abs(py2-py1)!=0):     #loaded down
-        print('loaded down')
-        if  Leg1_ext==1:
-            L1=L1+1
-            print('L1+1=')
-            print(L1)
-        elif Leg1_ret==1:
-            L1=L1-1 #4
-            print('L1-1=')
-            print(L1)
-        if  Leg2_ext==1:
-            L2=L2+1
-            print('L2+1=')
-            print(L2)
-        elif Leg2_ret==1:
-            L2=L2-1 #4
-            print('L2-1=')
-            print(L2)
-        if Leg3_ext==1:
-            L3=L3+1
-            print('L3+1=')
-            print(L3)
-        elif Leg3_ret==1:
-            L3=L3-1 #4
-            print('L3-1=')
-            print(L3)
-        if Leg4_ext==1:
-            L4=L4+1
-            print('L4+1=')
-            print(L4)
-        elif Leg4_ret==1:
-            L4=L4-1 #4
-            print('L4-1=')
-            print(L4)
+    if abs(px2 - px1) != 0 or abs(py2 - py1) != 0:
+        if Leg1_ext:
+            L1 += 1
+        elif Leg1_ret:
+            L1 -= 1
+        if Leg2_ext:
+            L2 += 1
+        elif Leg2_ret:
+            L2 -= 1
+        if Leg3_ext:
+            L3 += 1
+        elif Leg3_ret:
+            L3 -= 1
+        if Leg4_ext:
+            L4 += 1
+        elif Leg4_ret:
+            L4 -= 1
 
-    elif (abs(px2-px1)!=0) or (abs(py2-py1)!=0):     #unloaded down or up
-        print('loaded down or up')
-        if Leg1_ext==1:
-            L1=L1+1 #2
-            print('L1-1=')
-            print(L1)
-        elif Leg1_ret==1:
-            L1=L1-1 #2
-            print('L1+1=')
-            print(L1)
-        if Leg2_ext==1:
-            L2=L2+1
-            print('L2-1=')
-            print(L1)
-        elif Leg2_ret==1:
-            L2=L2-1
-            print('L2+1=')
-            print(L1)
-        if Leg3_ext==1:
-            L3=L3+1
-            print('L3-1=')
-            print(L3)
-        elif Leg3_ret==1:
-            L3=L3-1
-            print('L3+1=')
-            print(L3)
-        if Leg4_ext==1:
-            L4=L4+1
-            print('L4-1=')
-            print(L4)
-        elif Leg4_ret==1:
-            L4=L4-1
-            print('L4+1=')
-            print(L4)
-    elif (abs(px2-px1)!=0) or (abs(py2-py1)!=0):     #loaded up 
-        print('loaded up')
-        if Leg1_ext==1:
-            L1=L1+1 #2
-            print('L1+1=')
-            print(L1)
-        elif Leg1_ret==1:
-            L1=L1-1 #2
-            print('L1-1=')
-            print(L1)
-        if Leg2_ext==1:
-            L2=L2+1 #2
-            print('L2+1=')
-            print(L2)
-        elif Leg2_ret==1:
-            L2=L2-1 #2
-            print('L2-1=')
-            print(L2)
-        if Leg3_ext==1:
-            L3=L3+1 #2
-            print('L3+1=')
-            print(L3)
-        elif Leg3_ret==1:
-            L3=L3-1 #2
-            print('L4-1=')
-            print(L3)
-        if Leg4_ext==1:
-            L4=L4+1 #2
-            print('L4+1=')
-            print(L4)
-        elif Leg4_ret==1:
-            L4=L4-1 #2           
-            print('L4+1=')
-            print(L4)
-    Leg1_ret=0
-    Leg2_ret=0
-    Leg3_ret=0
-    Leg4_ret=0
-    Leg1_ext=0
-    Leg2_ext=0
-    Leg3_ext=0
-    Leg4_ext=0
-    print(L1,L2,L3,L4)
+    Leg1_ret = Leg2_ret = Leg3_ret = Leg4_ret = 0
+    Leg1_ext = Leg2_ext = Leg3_ext = Leg4_ext = 0
+    print(L1, L2, L3, L4)
 
 def Sort_Length():
     global L1
@@ -297,7 +152,6 @@ def Sort_Length():
     global Leg4_ext
     global Leg4_ret
     global Compare
-    global Compare_index
     global Count_Angle
  
     RL[0]=L1
@@ -331,7 +185,6 @@ def Legselection():
     global Leg4_ext
     global Leg4_ret
     global Compare
-    global Compare_index
     global Count_Angle
     global S1
     global S2
@@ -366,46 +219,43 @@ def Legselection():
 
 
 
-def AngleXY(ser):
-    ser = serial.Serial(port='/dev/ttyUSB0', baudrate=9600
-                         , timeout=0.5)
+def AngleXY():
+    global angle_x, angle_y, pattern_x, pattern_y
 
-    global command_xyz
-    global pattern_x
-    global pattern_y
-    global angle_x
-    global angle_y
-    global px1
-    global px2
-    global py1
-    global py2
-    ser.write(command_xyz)
-    word = ser.read(1000)
+    if ser is None or not ser.is_open:
+        return False
+
+    try:
+        ser.reset_input_buffer()
+        ser.write(command_xyz)
+        word = ser.read(1000)
+    except serial.SerialException:
+        return False
+
+    if not word:
+        return False
+
     feedback = word.hex()
+    if len(feedback) < 24:
+        return False
+
     pattern_x = ""
     pattern_y = ""
     for i in range(len(feedback)):
-        if i > 7 and i < 16:  # 8 to 15
-            if i == 11:
-                pattern_x += feedback[i] + "."
-            else:
-                pattern_x += feedback[i]
-        if i >= 16 and i < 24:  # 16 to 23
-            if i == 19:
-                pattern_y += feedback[i] + "."
-            else:
-                pattern_y += feedback[i]
+        if 7 < i < 16:
+            pattern_x += feedback[i] + ("." if i == 11 else "")
+        elif 16 <= i < 24:
+            pattern_y += feedback[i] + ("." if i == 19 else "")
 
-    if pattern_x[0] == "1":
-        angle_x = round(float(pattern_x[2:])) #Reverse direction
-    else:
-        angle_x = -round(float(pattern_x[2:]))
-    if pattern_y[0] == "1":
-        angle_y = -round(float(pattern_y[2:]))
-    else:
-        angle_y = round(float(pattern_y[2:]))
+    try:
+        x_value = round(float(pattern_x[2:]))
+        y_value = round(float(pattern_y[2:]))
+    except ValueError:
+        return False
 
-
+    angle_x = x_value if pattern_x[0] == "1" else -x_value
+    angle_y = -y_value if pattern_y[0] == "1" else y_value
+    return True
 
 #set all to stop
 def init_GPIO():
@@ -436,7 +286,7 @@ def Retract(x,y):
     change = True
     print("Changed")
     if(x!=0 and y!=0):
-         GPIO.output(relay2.GPIO.HIGH)
+         GPIO.output(relay2, GPIO.HIGH)
          GPIO.output(relay4,GPIO.HIGH)
          GPIO.output(relay6,GPIO.HIGH)
          GPIO.output(relay8,GPIO.HIGH)
@@ -458,7 +308,6 @@ def Docking():
     print("Docking")
     global started
     global docked
-    global docking
     global S1
     global S2
     global S3
@@ -472,9 +321,6 @@ def Docking():
     global S3G
     global S4G
     global balanced
-    global previous_x
-    global previous_y
-    global previous_z
     global angle_x
     global angle_y
     
@@ -491,7 +337,6 @@ def Docking():
     global Leg4_ext
     global Leg4_ret
     global Compare
-    global Compare_index
     global Count_Angle
     global px1
     global px2
@@ -505,25 +350,18 @@ def Docking():
     Legselection()
     name=input('Start Docking?')
     while docked==False:
+        if ser is None or not ser.is_open:
+            break
 
- 
-        try:
-            AngleXY(ser)
-            if Count_Angle==0:
-                px1 = angle_x
-                py1 = angle_y
-            elif Count_Angle==1:    
-                px2 = angle_x
-                py2 = angle_y
-            Count_Angle = ~ Count_Angle
-        except:
-            if Count_Angle==0:
-                px1 = angle_x
-                py1 = angle_y
-            elif Count_Angle==1:    
-                px2 = angle_x
-                py2 = angle_y
-            Count_Angle = ~ Count_Angle
+        if not AngleXY():
+            sleep(0.1)
+            continue
+
+        if Count_Angle == 0:
+            px1, py1 = angle_x, angle_y
+        else:
+            px2, py2 = angle_x, angle_y
+        Count_Angle ^= 1
 
         x_rot = angle_x
         y_rot = angle_y
@@ -616,145 +454,153 @@ def Docking():
           
                   
 
-init_GPIO()                
+def run():
+    global balanced, docked, change, started
+    global px1, py1, px2, py2, Count_Angle
+    global Leg1_ext, Leg2_ext, Leg3_ext, Leg4_ext
+    global sig1, sig2, sig3, sig4
 
-#Main Function
+    init_GPIO()
 
-while balanced == False or docked == False:
-    
-    try:
-        if ser.isOpen():
-            AngleXY(ser)
-        if Count_Angle==0:
-            px1 = angle_x
-            py1 = angle_y
-        elif Count_Angle==1:    
-            px2 = angle_x
-            py2 = angle_y
-        Count_Angle = ~ Count_Angle
-    except:
-        if Count_Angle==0:
-            px1 = angle_x
-            py1 = angle_y
-        elif Count_Angle==1:    
-            px2 = angle_x
-            py2 = angle_y
-        Count_Angle = ~ Count_Angle
-    x_rot = angle_x
-    y_rot = angle_y
-   
-    print("X rot: {0} Y rot: {1}".format(x_rot, y_rot))
-    # If the platform is balanced
-    if (x_rot == 0) and (y_rot == 0) and started == False:
-        if balanced == False:
-            started = True
-            sleep(.1)
-            Retract(x_rot, y_rot) # Optimization
-            started = False
-            print("Balanced!")
-        if balanced == True:
-           init_GPIO()
-           Docking()
-           break
-    # If the platform is not balanced
-    if (x_rot != 0) or (y_rot != 0):
-        init_GPIO()
-        if change == True:        # The change is triggered after retraction
+    while not (balanced and docked):
+        if ser is None or not ser.is_open:
+            break
+        if not AngleXY():
+            sleep(0.1)
+            continue
+
+        if Count_Angle == 0:
+            px1, py1 = angle_x, angle_y
+        else:
+            px2, py2 = angle_x, angle_y
+        Count_Angle ^= 1
+
+        x_rot = angle_x
+        y_rot = angle_y
+        print("X rot: {0} Y rot: {1}".format(x_rot, y_rot))
+
+        if x_rot == 0 and y_rot == 0 and not started:
+            if not balanced:
+                started = True
+                sleep(0.1)
+                Retract(x_rot, y_rot)
+                started = False
+                print("Balanced!")
+            if balanced:
+                init_GPIO()
+                Docking()
+                break
+
+        if x_rot != 0 or y_rot != 0:
             init_GPIO()
-            balanced = True
+            if change:
+                init_GPIO()
+                balanced = True
 
-        # The algorithmic judgement of 8 cases:
-        if x_rot > 0 and (y_rot == 0) and started == False:
-            started = True
-            GPIO.output(relay1, GPIO.LOW)
-            GPIO.output(relay3, GPIO.LOW)
-            Leg1_ext=1
-            Leg2_ext=1
-            recordlength()
-            started = False
-            print("2.1")
-            pass
+            if x_rot > 0 and y_rot == 0 and not started:
+                started = True
+                GPIO.output(relay1, GPIO.LOW)
+                GPIO.output(relay3, GPIO.LOW)
+                Leg1_ext = 1
+                Leg2_ext = 1
+                recordlength()
+                started = False
+                print("2.1")
 
-        if x_rot < 0 and (y_rot == 0) and started == False:
-            started = True
-            GPIO.output(relay5, GPIO.LOW)
-            GPIO.output(relay7, GPIO.LOW)
-            Leg3_ext=1
-            Leg4_ext=1
-            recordlength()
-            started = False
-            print("2.2")
-            pass
+            elif x_rot < 0 and y_rot == 0 and not started:
+                started = True
+                GPIO.output(relay5, GPIO.LOW)
+                GPIO.output(relay7, GPIO.LOW)
+                Leg3_ext = 1
+                Leg4_ext = 1
+                recordlength()
+                started = False
+                print("2.2")
 
-        if y_rot > 0 and (x_rot == 0) and started == False:
-            started = True
-            GPIO.output(relay1, GPIO.LOW)
-            GPIO.output(relay7, GPIO.LOW)
-            Leg1_ext=1
-            Leg4_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig2 = True
-            if change == True and sig2 == True:
-                sig3 = True
-            print("2.3")
-            pass
+            elif y_rot > 0 and x_rot == 0 and not started:
+                started = True
+                GPIO.output(relay1, GPIO.LOW)
+                GPIO.output(relay7, GPIO.LOW)
+                Leg1_ext = 1
+                Leg4_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig2 = True
+                if change and sig2:
+                    sig3 = True
+                print("2.3")
 
-        if y_rot < 0 and (x_rot == 0) and started == False:
-            started = True
-            GPIO.output(relay3, GPIO.LOW)
-            GPIO.output(relay5, GPIO.LOW)
-            Leg2_ext=1
-            Leg3_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig1 = True
-            print("2.4")
-            pass
+            elif y_rot < 0 and x_rot == 0 and not started:
+                started = True
+                GPIO.output(relay3, GPIO.LOW)
+                GPIO.output(relay5, GPIO.LOW)
+                Leg2_ext = 1
+                Leg3_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig1 = True
+                print("2.4")
 
-        if x_rot > 0 and y_rot > 0 and started == False:
-            started = True
-            GPIO.output(relay1, GPIO.LOW)
-            Leg1_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig3 = True
-            print("1.1")
-            pass
+            elif x_rot > 0 and y_rot > 0 and not started:
+                started = True
+                GPIO.output(relay1, GPIO.LOW)
+                Leg1_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig3 = True
+                print("1.1")
 
-        if x_rot > 0 and y_rot < 0 and started == False:
-            started = True
-            GPIO.output(relay3, GPIO.LOW)
-            Leg2_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig4 = True
-            print("1.2")
-            pass
+            elif x_rot > 0 and y_rot < 0 and not started:
+                started = True
+                GPIO.output(relay3, GPIO.LOW)
+                Leg2_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig4 = True
+                print("1.2")
 
-        if x_rot < 0 and y_rot > 0 and started == False:
-            started = True
-            GPIO.output(relay7, GPIO.LOW)
-            Leg4_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig2 = True
-            print("1.3")
-            pass
+            elif x_rot < 0 and y_rot > 0 and not started:
+                started = True
+                GPIO.output(relay7, GPIO.LOW)
+                Leg4_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig2 = True
+                print("1.3")
 
-        if x_rot < 0 and y_rot < 0 and started == False:
-            started = True
-            GPIO.output(relay5, GPIO.LOW)
-            Leg3_ext=1
-            recordlength()
-            started = False
-            if change == True:
-                sig1 = True
-            print("1.4")
-            pass
-init_GPIO()
+            elif x_rot < 0 and y_rot < 0 and not started:
+                started = True
+                GPIO.output(relay5, GPIO.LOW)
+                Leg3_ext = 1
+                recordlength()
+                started = False
+                if change:
+                    sig1 = True
+                print("1.4")
+
+
+def main():
+    global ser
+
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    for pin in (relay1, relay2, relay3, relay4, relay5, relay6, relay7, relay8):
+        GPIO.setup(pin, GPIO.OUT, initial=GPIO.HIGH)
+
+    try:
+        ser = serial.Serial(port='/dev/ttyUSB0', baudrate=9600, timeout=0.5)
+        run()
+    finally:
+        stop()
+        if ser is not None and ser.is_open:
+            ser.close()
+        GPIO.cleanup()
+
+
+if __name__ == "__main__":
+    main()
